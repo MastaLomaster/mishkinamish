@@ -39,6 +39,70 @@ IDC_BUTTON_TRAIN2, IDC_BUTTON_TRAIN3 , IDC_BUTTON_TRAIN4 , IDC_BUTTON_TRAIN5 };
 static int exclaim_controls[MM_NUM_TRAINING_BUTTONS]={IDC_STATIC_BMP0, IDC_STATIC_BMP1,
 IDC_STATIC_BMP2, IDC_STATIC_BMP3 , IDC_STATIC_BMP4 , IDC_STATIC_BMP5 };
 
+// Это заимствовано из MHook. 
+typedef struct
+{
+	TCHAR *stroka;
+	WORD value;
+} MHWORDChar;
+
+#define MH_NUM_SCANCODES 103
+
+// Здесь нет PrtScr,Pause
+MHWORDChar dlg_scancodes[MH_NUM_SCANCODES]=
+{
+	{L"<ничего>",0xFFFF}, // 0
+	{L"вверх",0xE048},{L"вправо",0xE04D},{L"вниз",0xE050},{L"влево",0xE04B}, // 1-4
+	{L"A",0x1E},{L"B",0x30},{L"C",0x2E},{L"D",0x20},{L"E",0x12}, // 5-9
+	{L"F",0x21},{L"G",0x22},{L"H",0x23},{L"I",0x17},{L"J",0x24}, // 10-14
+	{L"K",0x25},{L"L",0x26},{L"M",0x32},{L"N",0x31},{L"O",0x18}, // 15-19
+	{L"P",0x19},{L"Q",0x10},{L"R",0x13},{L"S",0x1F},{L"T",0x14}, // 20-24
+	{L"U",0x16},{L"V",0x2F},{L"W",0x11},{L"X",0x2D},{L"Y",0x15}, // 25-29
+	{L"Z",0x2C},{L"0",0x0B},{L"1",0x02},{L"2",0x03},{L"3",0x04}, // 30-34
+	{L"4",0x05},{L"5",0x06},{L"6",0x07},{L"7",0x08},{L"8",0x09}, // 35-39
+	{L"9",0x0A},{L"~",0x29},{L"-",0x0C},{L"=",0x0D},{L"\\",0x2B}, // 40-44
+	{L"[",0x1A},{L"]",0x1B},{L";",0x27},{L"'",0x28},{L",",0x33}, //45-49
+	{L".",0x34},{L"/",0x35},{L"Backspace",0x0E},{L"пробел",0x39},{L"TAB",0x0F}, // 50-54
+	{L"Caps Lock",0x3A},{L"Левый Shift",0x2A},{L"Левый Ctrl",0x1D},{L"Левый Alt",0x38},{L"Левый Win",0xE05B}, // 55-59
+	{L"Правый Shift",0x36},{L"Правый Ctrl",0xE01D},{L"Правый Alt",0xE038},{L"Правый WIN",0xE05C},{L"Menu",0xE05D}, // 60-64
+	{L"Enter",0x1C},{L"Esc",0x01},{L"F1",0x3B},{L"F2",0x3C},{L"F3",0x3D}, // 65-69
+	{L"F4",0x3E},{L"F5",0x3F},{L"F6",0x40},{L"F7",0x41},{L"(F8 - запрещена) ",0xFFFF}, // 70-74
+	{L"F9",0x43},{L"F10",0x44},{L"F11",0x57},{L"F12",0x58},{L"Scroll Lock",0x46}, // 75-79
+	{L"Insert",0xE052},{L"(Delete - запрещена)",0xE053},{L"Home",0xE047},{L"End",0xE04F},{L"PgUp",0xE049}, // 80-84
+	{L"PgDn",0xE051},{L"Num Lock",0x45},{L"Num /",0xE035},{L"Num *",0x37},{L"Num -",0x4A}, // 85-89
+	{L"Num +",0x4E},{L"Num Enter",0xE01C},{L"(Num . - запрещена)",0xFFFF},{L"Num 0",0x52},{L"Num 1",0x4F}, // 90-94
+	{L"Num 2",0x50},{L"Num 3",0x51},{L"Num 4",0x4B},{L"Num 5",0x4C},{L"Num 6",0x4D}, // 95-99
+	{L"Num 7",0x47},{L"Num 8",0x48},{L"Num 9",0x49} // 100-102
+}; 
+
+//============================================================================================
+// Выводит на экран то, что будет нажато
+//============================================================================================
+static void SetKeysInDialogue()
+{
+	int listbox[6]={IDC_KBD0, IDC_KBD1, IDC_KBD2, IDC_KBD3, IDC_KBD4, IDC_KBD5};
+	int i,j;
+	bool found;
+
+	for(i=0;i<6;i++)
+	{
+		found=false;
+		for(j=0;j<MH_NUM_SCANCODES;j++)
+		{
+			if(KChFstate::key_to_press[i]==dlg_scancodes[j].value)
+			{
+				found=true;
+				SendDlgItemMessage(hdwnd,listbox[i], CB_SETCURSEL, j, 0L); // Скорректируем выбранное устройство в списке диалога
+				break;
+			}
+		}
+		if(!found) // Такой клавиши нет в списке возможных, сбросить её в 0xffff
+		{
+			KChFstate::SetKeyToPress(i,0xffff);
+		}
+	}
+}
+
 //============================================================================================
 // Если что-то не натренировано, рисует восклицательные знаки
 // Вызывать после загрузки и тренировки
@@ -232,6 +296,23 @@ static BOOL CALLBACK DlgWndProc(HWND hdwnd,
 		hbm_right=(HBITMAP)LoadImage(GZInst,MAKEINTRESOURCE(IDB_BITMAP_RIGHT),IMAGE_BITMAP,0,0,LR_DEFAULTSIZE);
 		SendDlgItemMessage(hdwnd,IDC_STATIC_BMP_RIGHT, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbm_right);
 
+		// 2.7. Загружаем списки кнопок клавиатуры
+		// 2. Клавиши
+		for(i=0;i<MH_NUM_SCANCODES;i++)
+		{
+			SendDlgItemMessage(hdwnd,IDC_KBD0, CB_ADDSTRING, 0, (LPARAM)(dlg_scancodes[i].stroka));
+			SendDlgItemMessage(hdwnd,IDC_KBD1, CB_ADDSTRING, 0, (LPARAM)(dlg_scancodes[i].stroka));
+			SendDlgItemMessage(hdwnd,IDC_KBD2, CB_ADDSTRING, 0, (LPARAM)(dlg_scancodes[i].stroka));
+			SendDlgItemMessage(hdwnd,IDC_KBD3, CB_ADDSTRING, 0, (LPARAM)(dlg_scancodes[i].stroka));
+			SendDlgItemMessage(hdwnd,IDC_KBD4, CB_ADDSTRING, 0, (LPARAM)(dlg_scancodes[i].stroka));
+			SendDlgItemMessage(hdwnd,IDC_KBD5, CB_ADDSTRING, 0, (LPARAM)(dlg_scancodes[i].stroka));
+		}
+		SendDlgItemMessage(hdwnd,IDC_KBD0, CB_SETCURSEL, 0, 0L);
+		SendDlgItemMessage(hdwnd,IDC_KBD1, CB_SETCURSEL, 0, 0L);
+		SendDlgItemMessage(hdwnd,IDC_KBD2, CB_SETCURSEL, 0, 0L);
+		SendDlgItemMessage(hdwnd,IDC_KBD3, CB_SETCURSEL, 0, 0L);
+		SendDlgItemMessage(hdwnd,IDC_KBD4, CB_SETCURSEL, 0, 0L);
+		SendDlgItemMessage(hdwnd,IDC_KBD5, CB_SETCURSEL, 0, 0L);
 
 		// 3. Стартуем нулевое устройство (первое в списке)
 		// Теперь воспроизведение через звуковую карту бывает только для файлов в Release-версии
@@ -334,21 +415,22 @@ static BOOL CALLBACK DlgWndProc(HWND hdwnd,
 			break;
 			
 		case IDC_BUTTON_SAVE:
-			model.Save(false,hdwnd,L"default.MM1");
+			if(model.Save(false,hdwnd,L"default.MM1")) flag_model_changed=false;
 			break;
 
 		case IDC_BUTTON_SAVE_AS:
 			// Сбивается рабочий каталог и сохранять по умолчанию бессмысленно
+			/*
 			if(model.Save(true,hdwnd))
 			{
 				flag_model_changed=false;
 				EnableWindow( GetDlgItem( hdwnd, IDC_BUTTON_SAVE ), FALSE);
-			}
+			}*/
 			break;
 
 		case IDC_BUTTON_LOAD:
 			// Сбивается рабочий каталог и сохранять по умолчанию бессмысленно
-			if(model.Load(hdwnd))
+			/*if(model.Load(hdwnd))
 			{
 				flag_model_changed=false;
 				if(KChFstate::flag_kc_anytime) // Корректируем галочку в диалоге
@@ -357,7 +439,7 @@ static BOOL CALLBACK DlgWndProc(HWND hdwnd,
 					SendDlgItemMessage(hdwnd, IDC_CHECK_IGNORE_KC_INLINE, BM_SETCHECK, BST_CHECKED, 0);
 				InputThread::Start(current_device_num,hdwnd); // выставить устройство, прописанное в файле
 				EnableWindow( GetDlgItem( hdwnd, IDC_BUTTON_SAVE ), FALSE);
-			}
+			}*/
 			break;
 
 		case IDC_CHECK_IGNORE_KC_INLINE:
@@ -384,6 +466,66 @@ static BOOL CALLBACK DlgWndProc(HWND hdwnd,
 			}
 			break;
 		
+		case IDC_KBD0:
+			if(CBN_SELCHANGE==HIWORD(wparam)) // Выбрали другую клавишу
+			{
+				KChFstate::SetKeyToPress(0,dlg_scancodes[SendDlgItemMessage(hdwnd,IDC_KBD0, CB_GETCURSEL, 0, 0L)].value); 
+				flag_model_changed=true;
+				return 1;
+			}
+			else return 0;
+			break; // для поддержания общего стиля
+
+		case IDC_KBD1:
+			if(CBN_SELCHANGE==HIWORD(wparam)) // Выбрали другую клавишу
+			{
+				KChFstate::SetKeyToPress(1,dlg_scancodes[SendDlgItemMessage(hdwnd,IDC_KBD1, CB_GETCURSEL, 0, 0L)].value); 
+				flag_model_changed=true;
+				return 1;
+			}
+			else return 0;
+			break; // для поддержания общего стиля
+
+		case IDC_KBD2:
+			if(CBN_SELCHANGE==HIWORD(wparam)) // Выбрали другую клавишу
+			{
+				KChFstate::SetKeyToPress(2,dlg_scancodes[SendDlgItemMessage(hdwnd,IDC_KBD2, CB_GETCURSEL, 0, 0L)].value); 
+				flag_model_changed=true;
+				return 1;
+			}
+			else return 0;
+			break; // для поддержания общего стиля
+
+		case IDC_KBD3:
+			if(CBN_SELCHANGE==HIWORD(wparam)) // Выбрали другую клавишу
+			{
+				KChFstate::SetKeyToPress(3,dlg_scancodes[SendDlgItemMessage(hdwnd,IDC_KBD3, CB_GETCURSEL, 0, 0L)].value); 
+				flag_model_changed=true;
+				return 1;
+			}
+			else return 0;
+			break; // для поддержания общего стиля
+
+		case IDC_KBD4:
+			if(CBN_SELCHANGE==HIWORD(wparam)) // Выбрали другую клавишу
+			{
+				KChFstate::SetKeyToPress(4,dlg_scancodes[SendDlgItemMessage(hdwnd,IDC_KBD4, CB_GETCURSEL, 0, 0L)].value); 
+				flag_model_changed=true;
+				return 1;
+			}
+			else return 0;
+			break; // для поддержания общего стиля
+
+		case IDC_KBD5:
+			if(CBN_SELCHANGE==HIWORD(wparam)) // Выбрали другую клавишу
+			{
+				KChFstate::SetKeyToPress(5,dlg_scancodes[SendDlgItemMessage(hdwnd,IDC_KBD5, CB_GETCURSEL, 0, 0L)].value); 
+				flag_model_changed=true;
+				return 1;
+			}
+			else return 0;
+			break; // для поддержания общего стиля
+
 		default:
 			return 0;
 		}
@@ -419,6 +561,9 @@ int WINAPI WinMain(HINSTANCE hInst,HINSTANCE,LPSTR cline,INT)
 	// Грузим настройку по умолчанию
 	if(model.Load(NULL,L"default.MM1"))
 	{
+		// Отображаем, какие клавиши будут нажаты 
+		SetKeysInDialogue();
+
 		if(KChFstate::flag_kc_anytime) // Корректируем галочку в диалоге
 			SendDlgItemMessage(hdwnd, IDC_CHECK_IGNORE_KC_INLINE, BM_SETCHECK, BST_UNCHECKED, 0);
 		else 

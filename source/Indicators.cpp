@@ -313,6 +313,8 @@ HPEN Indicators::red_pen=0;
 			else
 				BitBlt(hdc,xpos6c[i],ypos6c[i],hor_increase,vert_increase,memdc,0,0,SRCCOPY);
 			if(i<4) move[i]=l; // Движение влево, вниз, вправо, вверх
+			// [23-AUG-2017] Если вместо мыши нажимаем клавиши, то move[i] обнуляется
+			if(flag_move_mouse)( move[i]=KChFstate::TryToPress(i,move[i]) );
 		}
 
 		
@@ -363,7 +365,19 @@ HPEN Indicators::red_pen=0;
 					KChWaits[i-4]=0;
 
 					// !!! Здесь будет нажатие или чё там
-					if(flag_move_mouse) Click(i-4);
+					if(flag_move_mouse)
+					{
+						// А не нажимаем ли мы клавишу клавиатуры вместо клика?
+						if(0==KChFstate::TryToPress(i, 10))
+						{
+							//Тут же отжимаем клавишу назад
+							KChFstate::TryToPress(i, 0);
+						}
+						else // Неееб кликаем по старинке.
+						{
+							Click(i-4);
+						}
+					}
 
 					// Отрисовка зелёным полноцветным
 					BitBlt(hdc,xpos6c[i],ypos6c[i],hor_increase,vert_increase,memdc,0,num_steps*vert_increase,SRCCOPY);

@@ -6,6 +6,9 @@ volatile int KChFstate::state(0), KChFstate::minlevel(0), KChFstate::counter(0);
 volatile bool KChFstate::flag_kc_anytime=false;
 volatile int KChFstate::next_kc_counter=0; // Через сколько фреймов можно нажать  К/Ч (в упрощенном режиме)
 
+volatile WORD KChFstate::key_to_press[6]={0xffff,0xffff,0xffff,0xffff,0xffff,0xffff};
+int KChFstate::key_state[6]={0,0,0,0,0,0}; // нажата-отжата
+
 //==================================================================================================
 // // может ли к или Ч быть рассмотрена кандидатом на нажатие (в нужное ли время ?) mod. [28-DEC]
 //==================================================================================================
@@ -148,3 +151,59 @@ void KChFstate::NewFrame(int energy_level)
 	}
 	
 }
+
+//=========================================================================================
+// Если вместо мыши нажимаем клавиши, то move обнуляется
+// SendInput содран из Mhook
+//=========================================================================================
+LONG KChFstate::TryToPress(int i, LONG move)
+{
+	// Защита от дурака...
+	if(i<0||i>6) return move;
+
+	// Возможно, клавишу с номером i мы вообще не нажимаем...
+	if(key_to_press[i]==0xffff) return move;
+
+	// Всё-таки нажатие будет
+	if(0==key_state[i]) //Нажимаем, если move больше граничного значения. Пусть это будет 3
+	{
+		if(move>3)
+		{
+			INPUT input={0};
+			input.type=INPUT_KEYBOARD;
+			input.ki.dwFlags = KEYEVENTF_SCANCODE;
+
+			if(key_to_press[i]>0xFF) // Этот скан-код из двух байтов, где первый - E0
+			{
+				input.ki.dwFlags|=KEYEVENTF_EXTENDEDKEY;
+			}
+
+			input.ki.wScan=key_to_press[i];
+			SendInput(1,&input,sizeof(INPUT));
+
+			key_state[i]=1; // Клавиша нажата
+		}
+	}
+	else // Клавиша нажата
+	{
+		// Отжимаем её, только если вообще не было признаков этого звука (move==0)
+		if(0==move)
+		{
+			INPUT input={0};
+			input.type=INPUT_KEYBOARD;
+			input.ki.dwFlags = KEYEVENTF_SCANCODE|KEYEVENTF_KEYUP;
+
+			if(key_to_press[i]>0xFF) // Этот скан-код из двух байтов, где первый - E0
+			{
+				input.ki.dwFlags|=KEYEVENTF_EXTENDEDKEY;
+			}
+
+			input.ki.wScan=key_to_press[i];
+			SendInput(1,&input,sizeof(INPUT));
+
+			key_state[i]=0; // Клавиша отжата
+		}
+	}
+	return 0;
+}
+

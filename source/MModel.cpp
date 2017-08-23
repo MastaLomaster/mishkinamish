@@ -529,8 +529,8 @@ wchar_t *MModel::Save(bool saveas, HWND hdwnd, wchar_t *_filename)
 	}
 
 	// 2. Пошло реальное сохранение
-	// 2.1. // [28-DEC] Сигнатура "MM002 "
-	fprintf(fout,"MM002 ");
+	// 2.1. // [28-DEC] Сигнатура "MM002 ", [23-AUG-2017] Сигнатура "MM002 " - запоминает клавиши для нажатия
+	fprintf(fout,"MM003 ");
 	
 	// Перебираем все данные в списке mfcc данной модификации звука
 	int person,sound,modifier,num_mfcc;
@@ -563,6 +563,9 @@ wchar_t *MModel::Save(bool saveas, HWND hdwnd, wchar_t *_filename)
 
 	// [28-DEC] 
 	fwrite((void *)&KChFstate::flag_kc_anytime, sizeof(KChFstate::flag_kc_anytime),1,fout); 
+
+	//[23-AUG-2017]
+	fwrite((void *)&KChFstate::key_to_press, 6*sizeof(WORD),1,fout);
 
 	fclose(fout);
 
@@ -646,12 +649,14 @@ wchar_t *MModel::Load(HWND hdwnd, wchar_t *_filename)
 	EmptyModel();
 
 	// 3. Пошла реальная загрузка
-	// 3.1. Сигнатуры "GZM001"
+	// 3.1. Сигнатуры "MM00x "
 	char signature[6];
 	fread(signature,6,1,fin);
 	
 	// Может читать файл конфигурации предыдущих версий
-	if(0==strncmp("MM002 ",signature,6)) version=2;
+	//[23-AUG-2017]
+	if(0==strncmp("MM003 ",signature,6)) version=3;
+	else if(0==strncmp("MM002 ",signature,6)) version=2;
 	else if(0!=strncmp("MM001 ",signature,6)) goto bad_file;
 
 	int person,sound,modifier,num_mfcc,i;
@@ -685,6 +690,11 @@ wchar_t *MModel::Load(HWND hdwnd, wchar_t *_filename)
 	if(version>=2) // с [28-DEC] добавился флаг flag_kc_anytime
 	{
 		fread((void *)&KChFstate::flag_kc_anytime, sizeof(KChFstate::flag_kc_anytime),1,fin); 
+	}
+
+	if(version>=3) // с [23-AUG-2017] добавились клавиши для нажатия
+	{
+		fread((void *)&KChFstate::key_to_press, 6*sizeof(WORD),1,fin); 
 	}
 
 	fclose(fin);
