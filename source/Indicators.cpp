@@ -373,7 +373,7 @@ HPEN Indicators::red_pen=0;
 							//Тут же отжимаем клавишу назад
 							KChFstate::TryToPress(i, 0);
 						}
-						else // Неееб кликаем по старинке.
+						else // Неее, кликаем по старинке.
 						{
 							Click(i-4);
 						}

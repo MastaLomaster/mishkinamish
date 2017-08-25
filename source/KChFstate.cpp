@@ -7,7 +7,9 @@ volatile bool KChFstate::flag_kc_anytime=false;
 volatile int KChFstate::next_kc_counter=0; // Через сколько фреймов можно нажать  К/Ч (в упрощенном режиме)
 
 volatile WORD KChFstate::key_to_press[6]={0xffff,0xffff,0xffff,0xffff,0xffff,0xffff};
+volatile char KChFstate::repeat_key[6]={0,0,0,0,0,0};
 int KChFstate::key_state[6]={0,0,0,0,0,0}; // нажата-отжата
+int KChFstate::key_cycle_counter[6]={0,0,0,0,0,0}; // Сколько ещё циклов нельзя менять состояние клавиши
 
 //==================================================================================================
 // // может ли к или Ч быть рассмотрена кандидатом на нажатие (в нужное ли время ?) mod. [28-DEC]
@@ -164,8 +166,11 @@ LONG KChFstate::TryToPress(int i, LONG move)
 	// Возможно, клавишу с номером i мы вообще не нажимаем...
 	if(key_to_press[i]==0xffff) return move;
 
+	// счётчик. при повторе меняет состояние клавиши каждые два тика (1/5 секунды)
+	if(key_cycle_counter[i]>0) key_cycle_counter[i]--; else key_cycle_counter[i]=0; // Защита от случайного ухода в минус.
+
 	// Всё-таки нажатие будет
-	if(0==key_state[i]) //Нажимаем, если move больше граничного значения. Пусть это будет 3
+	if((0==key_state[i])&&(0==key_cycle_counter[i])) //Нажимаем, если move больше граничного значения. Пусть это будет 3
 	{
 		if(move>3)
 		{
@@ -182,12 +187,18 @@ LONG KChFstate::TryToPress(int i, LONG move)
 			SendInput(1,&input,sizeof(INPUT));
 
 			key_state[i]=1; // Клавиша нажата
+			key_cycle_counter[i]=1; // Ещё (1) цикл её нельзя будет отжимать
+
+			// [25-AUG-2017] при повторяющихся нажатиях рекурсивно вызываем сами себя
+			//if(repeat_key[i])
+			//	TryToPress(i, 0);
+			
 		}
 	}
 	else // Клавиша нажата
 	{
-		// Отжимаем её, только если вообще не было признаков этого звука (move==0)
-		if(0==move)
+		// Отжимаем её, только если вообще не было признаков этого звука (move==0) или [25-AUG-2017] пришло время отжатия для повтора
+		if((0==move)||((repeat_key[i])&&(0==key_cycle_counter[i])))
 		{
 			INPUT input={0};
 			input.type=INPUT_KEYBOARD;
@@ -199,10 +210,13 @@ LONG KChFstate::TryToPress(int i, LONG move)
 			}
 
 			input.ki.wScan=key_to_press[i];
-			SendInput(1,&input,sizeof(INPUT));
+			SendInput(1,&input,sizeof(INPUT));	
 
 			key_state[i]=0; // Клавиша отжата
+			key_cycle_counter[i]=1; // Ещё (1) цикл её нельзя будет нажимать
 		}
+
+	
 	}
 	return 0;
 }

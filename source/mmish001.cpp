@@ -81,6 +81,7 @@ MHWORDChar dlg_scancodes[MH_NUM_SCANCODES]=
 static void SetKeysInDialogue()
 {
 	int listbox[6]={IDC_KBD0, IDC_KBD1, IDC_KBD2, IDC_KBD3, IDC_KBD4, IDC_KBD5};
+	int listbox2[4]={IDC_CHECK_REPEAT0, IDC_CHECK_REPEAT1, IDC_CHECK_REPEAT2, IDC_CHECK_REPEAT3};
 	int i,j;
 	bool found;
 
@@ -100,6 +101,15 @@ static void SetKeysInDialogue()
 		{
 			KChFstate::SetKeyToPress(i,0xffff);
 		}
+	}
+
+	// Теперь чекбоксы "повтор"
+	for(i=0;i<4;i++)
+	{
+		if(KChFstate::repeat_key[i]) // Корректируем галочку в диалоге
+			SendDlgItemMessage(hdwnd, listbox2[i], BM_SETCHECK, BST_CHECKED, 0);
+		else 
+			SendDlgItemMessage(hdwnd, listbox2[i], BM_SETCHECK, BST_UNCHECKED, 0);
 	}
 }
 
@@ -451,6 +461,49 @@ static BOOL CALLBACK DlgWndProc(HWND hdwnd,
 				KChFstate::flag_kc_anytime=true;
 
 			break;
+
+			//===== чекбоксы повтора
+
+		case IDC_CHECK_REPEAT0:
+			flag_model_changed=true;
+			// Тут можно было как-то wparam контролировать, но не было под рукой справки
+			if(BST_CHECKED==SendDlgItemMessage(hdwnd, IDC_CHECK_REPEAT0, BM_GETCHECK, 0, 0))
+				KChFstate::SetRepeatKey(0,1);
+			else
+				KChFstate::SetRepeatKey(0,0);
+
+			break;
+
+		case IDC_CHECK_REPEAT1:
+			flag_model_changed=true;
+			// Тут можно было как-то wparam контролировать, но не было под рукой справки
+			if(BST_CHECKED==SendDlgItemMessage(hdwnd, IDC_CHECK_REPEAT1, BM_GETCHECK, 0, 0))
+				KChFstate::SetRepeatKey(1,1);
+			else
+				KChFstate::SetRepeatKey(1,0);
+
+			break;
+
+		case IDC_CHECK_REPEAT2:
+			flag_model_changed=true;
+			// Тут можно было как-то wparam контролировать, но не было под рукой справки
+			if(BST_CHECKED==SendDlgItemMessage(hdwnd, IDC_CHECK_REPEAT2, BM_GETCHECK, 0, 0))
+				KChFstate::SetRepeatKey(2,1);
+			else
+				KChFstate::SetRepeatKey(2,0);
+
+			break;
+
+		case IDC_CHECK_REPEAT3:
+			flag_model_changed=true;
+			// Тут можно было как-то wparam контролировать, но не было под рукой справки
+			if(BST_CHECKED==SendDlgItemMessage(hdwnd, IDC_CHECK_REPEAT3, BM_GETCHECK, 0, 0))
+				KChFstate::SetRepeatKey(3,1);
+			else
+				KChFstate::SetRepeatKey(3,0);
+
+			break;
+			//=====
 
 		case IDC_BUTTON_WAV_DUMP:
 			// Start и Stop меняют надпись на кнопке. Для этого hdwnd
