@@ -11,6 +11,14 @@ volatile char KChFstate::repeat_key[6]={0,0,0,0,0,0};
 int KChFstate::key_state[6]={0,0,0,0,0,0}; // нажата-отжата
 int KChFstate::key_cycle_counter[6]={0,0,0,0,0,0}; // Сколько ещё циклов нельзя менять состояние клавиши
 
+#ifdef _DEBUG
+void KCOnTick(int state);
+#else
+static void KCOnTick(int state){}; // Если не отладка, то функция пуста
+#endif
+
+
+
 //==================================================================================================
 // // может ли к или Ч быть рассмотрена кандидатом на нажатие (в нужное ли время ?) mod. [28-DEC]
 //==================================================================================================
@@ -62,12 +70,14 @@ void KChFstate::NewFrame(int energy_level)
 		{
 			minlevel=energy_level;
 			counter=0;
+			KCOnTick(state); // отладка
 			return;
 		}
 		if(energy_level>minlevel+1) // снова не тот уровень мы считали базовым для спокойствия! но уже в сторону повышения.
 		{
 			minlevel=energy_level-1;
 			counter=0;
+			KCOnTick(state); // отладка
 			return;
 		}
 		// Остаёмся в нужных пределах
@@ -77,12 +87,14 @@ void KChFstate::NewFrame(int energy_level)
 			counter=0;
 			state=1;
 		}
+		KCOnTick(state); // отладка
 		return;
 
 	case 1: // Здесь нам позволено получить всплеск энергии, но не позволено получить понижение энергии
 		if(energy_level<minlevel) // не тот уровень мы считали нижним!
 		{
 			state=0;
+			KCOnTick(state); // отладка
 			minlevel=energy_level;
 			counter=0;
 			return;
@@ -93,16 +105,19 @@ void KChFstate::NewFrame(int energy_level)
 			OutputDebugString(L"\r\n***NACHALO!***\r\n");
 #endif
 			state=2;
+			KCOnTick(state); // отладка
 			counter=0;
 			return;
 		}
 		// Если же ничего из вышеперечисленного не происходит, можем оставаться в этом состоянии хоть вечность. И счетчик нам не нужен.
+		KCOnTick(state); // отладка 
 		return;
 
 	case 2:
 		if(energy_level<=minlevel+1) // Это то, чего я ждал! Короткий звук завершился вовремя! Теперь ждём, что после него тоже будет пауза
 		{
 			state=3;
+			KCOnTick(state); // отладка
 			counter=0;
 			return;
 		}
@@ -118,9 +133,12 @@ void KChFstate::NewFrame(int energy_level)
 			OutputDebugString(L"***dolgo :-( !***\r\n");
 #endif
 			state=0;
+			KCOnTick(state); // отладка
 			counter=0;
 			return;
 		}
+
+		KCOnTick(state); // отладка 
 		return; // Единыжды это может быть выполнено. Второй раз - уже перебор фреймов короткого звука.
 
 	case 3:
@@ -129,6 +147,7 @@ void KChFstate::NewFrame(int energy_level)
 // !!! Здесь сбросить ожидающих "к" и "ч"
 			Indicators::KChConfirmed=2;
 			state=0;
+			KCOnTick(state); // отладка
 			counter=0;
 #ifdef _DEBUG
 			OutputDebugString(L"\r\nLISHNY VSPLESK!\r\n");
@@ -145,10 +164,12 @@ void KChFstate::NewFrame(int energy_level)
 #ifdef _DEBUG
 			OutputDebugString(L"\r\nSHORT SOUND!\r\n");
 #endif
-			state=0;
+			state=1;
+			KCOnTick(state); // отладка
 			counter=0;
 			return;
 		}
+		KCOnTick(state); // отладка (тут красное прёт)
 		return;
 	}
 	
@@ -175,15 +196,30 @@ LONG KChFstate::TryToPress(int i, LONG move)
 		if(move>3)
 		{
 			INPUT input={0};
-			input.type=INPUT_KEYBOARD;
-			input.ki.dwFlags = KEYEVENTF_SCANCODE;
 
-			if(key_to_press[i]>0xFF) // Этот скан-код из двух байтов, где первый - E0
+			if(key_to_press[i]>=0xFF00) // Спец.случай. нажатие на кнопки мыши
 			{
-				input.ki.dwFlags|=KEYEVENTF_EXTENDEDKEY;
+				input.type=INPUT_MOUSE;
+				
+				if(0xFF00==key_to_press[i]) // левая
+					input.mi.dwFlags=MOUSEEVENTF_LEFTDOWN;
+				else
+					input.mi.dwFlags=MOUSEEVENTF_RIGHTDOWN;
 			}
+			else // клавиатура
+			{
+				input.type=INPUT_KEYBOARD;
+				input.ki.dwFlags = KEYEVENTF_SCANCODE;
 
-			input.ki.wScan=key_to_press[i];
+				if(key_to_press[i]>0xFF) // Этот скан-код из двух байтов, где первый - E0
+				{
+					input.ki.dwFlags|=KEYEVENTF_EXTENDEDKEY;
+				}
+
+				input.ki.wScan=key_to_press[i];
+			}
+			
+			
 			SendInput(1,&input,sizeof(INPUT));
 
 			key_state[i]=1; // Клавиша нажата
@@ -201,15 +237,28 @@ LONG KChFstate::TryToPress(int i, LONG move)
 		if((0==move)||((repeat_key[i])&&(0==key_cycle_counter[i])))
 		{
 			INPUT input={0};
-			input.type=INPUT_KEYBOARD;
-			input.ki.dwFlags = KEYEVENTF_SCANCODE|KEYEVENTF_KEYUP;
-
-			if(key_to_press[i]>0xFF) // Этот скан-код из двух байтов, где первый - E0
+			if(key_to_press[i]>=0xFF00) // Спец.случай. нажатие на кнопки мыши
 			{
-				input.ki.dwFlags|=KEYEVENTF_EXTENDEDKEY;
+				input.type=INPUT_MOUSE;
+				
+				if(0xFF00==key_to_press[i]) // левая
+					input.mi.dwFlags=MOUSEEVENTF_LEFTUP;
+				else
+					input.mi.dwFlags=MOUSEEVENTF_RIGHTUP;
+			}
+			else // клавиатура
+			{
+				input.type=INPUT_KEYBOARD;
+				input.ki.dwFlags = KEYEVENTF_SCANCODE|KEYEVENTF_KEYUP;
+
+				if(key_to_press[i]>0xFF) // Этот скан-код из двух байтов, где первый - E0
+				{
+					input.ki.dwFlags|=KEYEVENTF_EXTENDEDKEY;
+				}
+
+				input.ki.wScan=key_to_press[i];
 			}
 
-			input.ki.wScan=key_to_press[i];
 			SendInput(1,&input,sizeof(INPUT));	
 
 			key_state[i]=0; // Клавиша отжата

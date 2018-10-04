@@ -18,6 +18,7 @@ HBITMAP hbm_exclaim=0, hbm_up, hbm_left, hbm_down, hbm_right;
 bool flag_model_changed=false;
 
 int SUWindow(); // дополнительное окно в режиме суперпользователя
+int KCWindow(); // дополнительное окно в режиме суперпользователя
 
 // Потом это вынесем куда-нибудь. Этим пользуются все - и WorkerThread, и CopyShmopy, и Indicators 
 volatile bool flag_training_mode=false;
@@ -46,7 +47,7 @@ typedef struct
 	WORD value;
 } MHWORDChar;
 
-#define MH_NUM_SCANCODES 103
+#define MH_NUM_SCANCODES 105
 
 // Здесь нет PrtScr,Pause
 MHWORDChar dlg_scancodes[MH_NUM_SCANCODES]=
@@ -72,7 +73,8 @@ MHWORDChar dlg_scancodes[MH_NUM_SCANCODES]=
 	{L"PgDn",0xE051},{L"Num Lock",0x45},{L"Num /",0xE035},{L"Num *",0x37},{L"Num -",0x4A}, // 85-89
 	{L"Num +",0x4E},{L"Num Enter",0xE01C},{L"(Num . - запрещена)",0xFFFF},{L"Num 0",0x52},{L"Num 1",0x4F}, // 90-94
 	{L"Num 2",0x50},{L"Num 3",0x51},{L"Num 4",0x4B},{L"Num 5",0x4C},{L"Num 6",0x4D}, // 95-99
-	{L"Num 7",0x47},{L"Num 8",0x48},{L"Num 9",0x49} // 100-102
+	{L"Num 7",0x47},{L"Num 8",0x48},{L"Num 9",0x49}, // 100-102
+	{L"Левая мышь",0xFF00},{L"Правая мышь",0xFF01}
 }; 
 
 //============================================================================================
@@ -604,6 +606,7 @@ int WINAPI WinMain(HINSTANCE hInst,HINSTANCE,LPSTR cline,INT)
 
 #ifdef MM_SUPERUSER
 	SUWindow(); // Это не для всех
+	KCWindow(); // Это тоже
 #endif
 
 	// Диалог теперь - немодальный. Ибо в режиме суперпользователя появляется ещё одно окно

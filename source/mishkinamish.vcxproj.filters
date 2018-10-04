@@ -101,4 +101,24 @@
       <Filter>Файлы исходного кода</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="icon1.ico">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
+    <Image Include="exclaim.bmp">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
+    <Image Include="arrow-up.bmp">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
+    <Image Include="arrow-left.bmp">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
+    <Image Include="arrow-down.bmp">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
+    <Image Include="arrow-right.bmp">
+      <Filter>Файлы ресурсов</Filter>
+    </Image>
+  </ItemGroup>
 </Project>
