@@ -7,6 +7,7 @@
 #define num_steps 7
 
 extern LONG volatile sounds_found[6];
+extern int g_add_mouse_speed;
 
 extern volatile bool flag_training_mode;
 extern volatile long training_mfcc_recorded; // 17-DEC
@@ -92,7 +93,7 @@ HPEN Indicators::red_pen=0;
 	// Конец-красный
 	rect.left=rect.right;
 	rect.right=xsize;
-	rect.top+=vert_increase;rect.bottom+=vert_increase;
+	rect.top+=vert_increase;rect	.bottom+=vert_increase;
 	FillRect(memdc,&rect,red_brush); 
 	
 	// Для красоты проведём вертикальные линии
@@ -209,6 +210,10 @@ HPEN Indicators::red_pen=0;
 
 	INPUT input[1]={0};
 
+	// 0. Принимаем во внимание скорость
+	hor=(long)(hor*(1.0f+g_add_mouse_speed/20.0f));
+	vert=(long)(vert*(1.0f+g_add_mouse_speed/20.0f));
+
 	// 1. Сначала подвинем курсор
 	input[0].type=INPUT_MOUSE;
 	//input[0].mi.dx=(LONG)(hor*XSCALEFACTOR);
@@ -228,7 +233,7 @@ HPEN Indicators::red_pen=0;
 
 
  //================================================================================================================
- // Щелчок мышью: 0 - К (нажатие с отпусканием), 1 - Ч (только нажатие или отпускание) (содрано из bkb/Fixation.cpp)
+ // Щелчок мышью: 0 - К (нажатие с отпусканием), 1 - Ч (только нажатие) (содрано из bkb/Fixation.cpp)
  //=================================================================================================================
  static void Click(int KCh)
  {
@@ -347,6 +352,7 @@ HPEN Indicators::red_pen=0;
 			OutputDebugString(L"NEVOVREMYA :-( !***\r\n");
 #endif
 						// Отрисовка красным полноцветным
+// !!! Сюда нужно было рисовать другим цветом, ибо путает!!!
 						BitBlt(hdc,xpos6c[i],ypos6c[i],hor_increase,vert_increase,memdc,(num_steps-1)*hor_increase,num_steps*vert_increase,SRCCOPY);
 					}
 				}

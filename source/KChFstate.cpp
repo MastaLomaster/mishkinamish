@@ -37,6 +37,14 @@ bool KChFstate::IsKCValid()
 	}
 	else
 	{
+		//06.04.2019
+		// Чтобы могло сработать тихе произношение буквы К
+		if(1==state)
+		{
+			Indicators::KChConfirmed=1;
+			return true;
+		}
+
 		// Есть мысль, что и в состоянии 3 всегда valid. Лишь бы уровень сигнала был подходящим. Меняем:
 		// return ((2==state)||((3==state)&&(counter<=3));
 		return ((2==state)||(3==state));

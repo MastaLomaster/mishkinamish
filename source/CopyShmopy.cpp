@@ -9,7 +9,7 @@
 #include "WorkerThread.h"
 
 bool flag_sphinx_legacy=false; // Используем ли старый кривоватый алгоритм Сфинкса для вычисления DCT?
-
+int g_add_mouse_speed=0;
 
 #ifdef MM_SUPERUSER
 extern HWND exported_ogl_hwnd;
@@ -285,7 +285,20 @@ float *CopyShmopy::DoMagic(float *input_data, bool remember_master_mfcc)
 		if(i>=0)
 		{
 			InterlockedIncrement(&sounds_found[i]); // Ибо другой поток сбрасывает в 0 (Indicators::Draw - какая насмешка! Плебей принимает решение!)
+			// [06.04.2019]
+			if(i<4) // к и ч не считаются
+			{
+				g_add_mouse_speed+=1;
+				if(g_add_mouse_speed>20) g_add_mouse_speed=20;
+			}
 		}
+		else
+		{
+			g_add_mouse_speed-=5;
+			if(g_add_mouse_speed<0) g_add_mouse_speed=0;
+		}
+			
+
 	}
 
 	// 5. Накапливаем 7 отсчетов в буфере №1
