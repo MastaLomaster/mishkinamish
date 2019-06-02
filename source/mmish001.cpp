@@ -50,6 +50,34 @@ typedef struct
 #define MH_NUM_SCANCODES 105
 
 // Здесь нет PrtScr,Pause
+#ifdef MMISH_ENGLISH
+MHWORDChar dlg_scancodes[MH_NUM_SCANCODES]=
+{
+	{L"<nothing>",0xFFFF}, // 0
+	{L"up",0xE048},{L"right",0xE04D},{L"down",0xE050},{L"left",0xE04B}, // 1-4
+	{L"A",0x1E},{L"B",0x30},{L"C",0x2E},{L"D",0x20},{L"E",0x12}, // 5-9
+	{L"F",0x21},{L"G",0x22},{L"H",0x23},{L"I",0x17},{L"J",0x24}, // 10-14
+	{L"K",0x25},{L"L",0x26},{L"M",0x32},{L"N",0x31},{L"O",0x18}, // 15-19
+	{L"P",0x19},{L"Q",0x10},{L"R",0x13},{L"S",0x1F},{L"T",0x14}, // 20-24
+	{L"U",0x16},{L"V",0x2F},{L"W",0x11},{L"X",0x2D},{L"Y",0x15}, // 25-29
+	{L"Z",0x2C},{L"0",0x0B},{L"1",0x02},{L"2",0x03},{L"3",0x04}, // 30-34
+	{L"4",0x05},{L"5",0x06},{L"6",0x07},{L"7",0x08},{L"8",0x09}, // 35-39
+	{L"9",0x0A},{L"~",0x29},{L"-",0x0C},{L"=",0x0D},{L"\\",0x2B}, // 40-44
+	{L"[",0x1A},{L"]",0x1B},{L";",0x27},{L"'",0x28},{L",",0x33}, //45-49
+	{L".",0x34},{L"/",0x35},{L"Backspace",0x0E},{L"Space",0x39},{L"TAB",0x0F}, // 50-54
+	{L"Caps Lock",0x3A},{L"Left Shift",0x2A},{L"Left Ctrl",0x1D},{L"Left Alt",0x38},{L"Left Win",0xE05B}, // 55-59
+	{L"Right Shift",0x36},{L"Right Ctrl",0xE01D},{L"Right Alt",0xE038},{L"Right WIN",0xE05C},{L"Menu",0xE05D}, // 60-64
+	{L"Enter",0x1C},{L"Esc",0x01},{L"F1",0x3B},{L"F2",0x3C},{L"F3",0x3D}, // 65-69
+	{L"F4",0x3E},{L"F5",0x3F},{L"F6",0x40},{L"F7",0x41},{L"(F8 - disabled) ",0xFFFF}, // 70-74
+	{L"F9",0x43},{L"F10",0x44},{L"F11",0x57},{L"F12",0x58},{L"Scroll Lock",0x46}, // 75-79
+	{L"Insert",0xE052},{L"(Delete - disabled)",0xE053},{L"Home",0xE047},{L"End",0xE04F},{L"PgUp",0xE049}, // 80-84
+	{L"PgDn",0xE051},{L"Num Lock",0x45},{L"Num /",0xE035},{L"Num *",0x37},{L"Num -",0x4A}, // 85-89
+	{L"Num +",0x4E},{L"Num Enter",0xE01C},{L"(Num . - disabled)",0xFFFF},{L"Num 0",0x52},{L"Num 1",0x4F}, // 90-94
+	{L"Num 2",0x50},{L"Num 3",0x51},{L"Num 4",0x4B},{L"Num 5",0x4C},{L"Num 6",0x4D}, // 95-99
+	{L"Num 7",0x47},{L"Num 8",0x48},{L"Num 9",0x49}, // 100-102
+	{L"Left mouse button",0xFF00},{L"Right mouse button",0xFF01}
+}; 
+#else
 MHWORDChar dlg_scancodes[MH_NUM_SCANCODES]=
 {
 	{L"<ничего>",0xFFFF}, // 0
@@ -76,6 +104,7 @@ MHWORDChar dlg_scancodes[MH_NUM_SCANCODES]=
 	{L"Num 7",0x47},{L"Num 8",0x48},{L"Num 9",0x49}, // 100-102
 	{L"Левая мышь",0xFF00},{L"Правая мышь",0xFF01}
 }; 
+#endif
 
 //============================================================================================
 // Выводит на экран то, что будет нажато
@@ -149,7 +178,11 @@ bool UpdateExclaim(bool hide=false)
 		// Тут нужен восклицательный знак
 		SendDlgItemMessage(hdwnd,IDC_STATIC_BMP6, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbm_exclaim);
 		// В спец. области выводим подсказку
+#ifdef MMISH_ENGLISH
+		SetDlgItemText(hdwnd, IDC_STATIC_GROM, L"The program was not trained to work with some of the sounds. To train it press the \"Train\" button, keep silence for a while, then pronounce the sound several times.");
+#else
 		SetDlgItemText(hdwnd, IDC_STATIC_GROM, L"Программа ещё не обучена некоторым звукам. Для обучения нажмите кнопку “Тренировать” и, выждав паузу, несколько раз произнесите в микрофон нужный звук.");
+#endif
 		return false;
 	}
 	else
@@ -172,7 +205,13 @@ void StopTrainingMode()
 	// Показать все кнопки кроме той, что с номером _sound. Ей поменять надпись на "Тренировать"
 	for(i=0;i<MM_NUM_TRAINING_BUTTONS;i++)
 	{
-		if(i==training_sound) SetDlgItemText(hdwnd, training_buttons[i], L"Тренировать");
+		if(i==training_sound)
+#ifdef MMISH_ENGLISH			
+			SetDlgItemText(hdwnd, training_buttons[i], L"Train");
+#else
+			SetDlgItemText(hdwnd, training_buttons[i], L"Тренировать");
+#endif
+		
 		else EnableWindow( GetDlgItem( hdwnd, training_buttons[i] ), TRUE);
 	}
 
@@ -210,7 +249,12 @@ void StartTrainingMode(int _sound)
 	// Спрятать все кнопки кроме той, что с номером _sound. Ей поменять надпись на "Прекратить"
 	for(i=0;i<MM_NUM_TRAINING_BUTTONS;i++)
 	{
-		if(i==_sound) SetDlgItemText(hdwnd, training_buttons[i], L"Прекратить");
+		if(i==_sound)
+#ifdef MMISH_ENGLISH			
+			SetDlgItemText(hdwnd, training_buttons[i], L"Stop");
+#else
+			SetDlgItemText(hdwnd, training_buttons[i], L"Прекратить");
+#endif
 		else EnableWindow( GetDlgItem( hdwnd, training_buttons[i] ), FALSE);
 	}
 
@@ -223,7 +267,11 @@ void StartTrainingMode(int _sound)
 	UpdateExclaim(true);
 
 	// В спец. области выводим подсказку
+#ifdef MMISH_ENGLISH
+	SetDlgItemText(hdwnd, IDC_STATIC_GROM, L"Speak louder than the noise level (marked with the red line)");
+#else
 	SetDlgItemText(hdwnd, IDC_STATIC_GROM, L"Говорите громче уровня шума (отмечен красной полоской)");
+#endif
 
 	// Перерисовать диалог, остались рудименты
 	InvalidateRect(hdwnd,NULL,TRUE);
@@ -275,7 +323,11 @@ static BOOL CALLBACK DlgWndProc(HWND hdwnd,
 		// 2.1 Проверить, есть ли вообще звуковые устройства. Ибо если нет - немедленно выпить... то есть выйти
 		if(0==iNumDevs)
 		{
+#ifdef MMISH_ENGLISH
+			MessageBox(hdwnd,L"You need a sound recording device in the computer (e.g. microphone) for the program to work!",L"No one sound recording device found",MB_OK);
+#else
 			MessageBox(hdwnd,L"Для работы программы необходимо, чтобы в компьютере работало устройство для записи звука!",L"Не найдено ни одного звукового устройства",MB_OK);
+#endif
 			EndDialog(hdwnd,3);
 			return 1;
 		}
@@ -285,7 +337,12 @@ static BOOL CALLBACK DlgWndProc(HWND hdwnd,
 			waveInGetDevCaps(i, &wic, sizeof(WAVEINCAPS));
 			SendDlgItemMessage(hdwnd,IDC_COMBO_MIC, CB_ADDSTRING, 0, (LPARAM)(wic.szPname));
 		}
+#ifdef MMISH_ENGLISH
+		SendDlgItemMessage(hdwnd,IDC_COMBO_MIC, CB_ADDSTRING, 0, (LPARAM)L"Reading from file");
+#else
 		SendDlgItemMessage(hdwnd,IDC_COMBO_MIC, CB_ADDSTRING, 0, (LPARAM)L"Чтение из файла");
+#endif
+
 		SendDlgItemMessage(hdwnd,IDC_COMBO_MIC, CB_SETCURSEL, 0, 0L); // Иначе там ничего не выбрано
 
 		// 2.5
@@ -358,7 +415,11 @@ static BOOL CALLBACK DlgWndProc(HWND hdwnd,
 			}
 
 			// были изменения, возможно, их лучше сохранить
+#ifdef MMISH_ENGLISH
+			exit_result = MessageBox(NULL, L"Save what it was trained?", L"Save what it was trained?",  MB_YESNOCANCEL | MB_ICONQUESTION);
+#else
 			exit_result = MessageBox(NULL, L"Сохранить натренированное?", L"Сохранить натренированное?",  MB_YESNOCANCEL | MB_ICONQUESTION);
+#endif
 			switch(exit_result)
 			{
 			case IDYES:
@@ -382,12 +443,20 @@ static BOOL CALLBACK DlgWndProc(HWND hdwnd,
 			if(flag_move_mouse)
 			{
 				flag_move_mouse=false;
+#ifdef MMISH_ENGLISH
+				SetDlgItemText(hdwnd, IDOK, L"Start");
+#else
 				SetDlgItemText(hdwnd, IDOK, L"Запустить");
+#endif
 			}
 			else
 			{
 				flag_move_mouse=true;
+#ifdef MMISH_ENGLISH
+				SetDlgItemText(hdwnd, IDOK, L"Stop");
+#else
 				SetDlgItemText(hdwnd, IDOK, L"Стоп");
+#endif
 			}
 			return 1;
 
@@ -611,7 +680,12 @@ int WINAPI WinMain(HINSTANCE hInst,HINSTANCE,LPSTR cline,INT)
 
 	// Диалог теперь - немодальный. Ибо в режиме суперпользователя появляется ещё одно окно
 	//DialogBox(hInst,MAKEINTRESOURCE(IDD_DIALOG1),NULL,(DLGPROC)DlgWndProc);
+#ifdef MMISH_ENGLISH
+	hdwnd=CreateDialog(hInst, MAKEINTRESOURCE(IDD_DIALOG1_ENG),NULL,(DLGPROC)DlgWndProc);
+#else
 	hdwnd=CreateDialog(hInst, MAKEINTRESOURCE(IDD_DIALOG1),NULL,(DLGPROC)DlgWndProc);
+#endif
+
 	ShowWindow(hdwnd,SW_SHOWNORMAL);
 
 	// Грузим настройку по умолчанию

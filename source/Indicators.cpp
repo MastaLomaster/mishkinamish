@@ -295,7 +295,11 @@ HPEN Indicators::red_pen=0;
 		 FillRect(hdc,&temp_rect,red_brush);
 		 SetTextColor(hdc,RGB(255,255,255));
 		 SetBkColor(hdc,RGB(255,0,0));
+#ifdef MMISH_ENGLISH
+		 TextOut(hdc,xpos,ypos,L"Silence!",8); // при переводе здесь быть осторожным, длина строки изменится
+#else
 		 TextOut(hdc,xpos,ypos,L"Тишина в студии!",17); // при переводе здесь быть осторожным, длина строки изменится
+#endif
 		 flag_tishina_v_studii=true;
 	 }
 	 else

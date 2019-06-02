@@ -21,7 +21,13 @@ unsigned long MMWAVLoader::position=0;
 unsigned long MMWAVLoader::length=0;
 
 // Переменные для диалога
+#ifdef MMISH_ENGLISH
+static TCHAR *filter_WAV=L"WAV files\0*.WAV\0\0";
+#else
 static TCHAR *filter_WAV=L"файлы WAV\0*.WAV\0\0";
+#endif
+
+
 static TCHAR filename[1258];
 static TCHAR filetitle[1258];
 
