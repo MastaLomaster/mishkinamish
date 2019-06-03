@@ -166,7 +166,11 @@ bad_format:
 	if(samples) {delete[] samples; samples=0;}
 	fclose(fin);
 	position=0;
-	MessageBox(hdwnd,L"Неподдерживаемый формат файла",L"Ошибка",MB_OK);
+#ifdef MMISH_ENGLISH
+	MessageBox(hdwnd,L"Unsupported file format. Use only 16 bit / 16 kHz / mono files",L"Error",MB_OK);
+#else
+	MessageBox(hdwnd,L"Неподдерживаемый формат файла. Используйте только 16 бит / 16 кГц / моно файлы",L"Ошибка",MB_OK);
+#endif
 	//GZReportError(L"Неподдерживаемый формат файла");
 	return(NULL);
 };

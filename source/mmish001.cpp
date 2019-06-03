@@ -179,7 +179,7 @@ bool UpdateExclaim(bool hide=false)
 		SendDlgItemMessage(hdwnd,IDC_STATIC_BMP6, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hbm_exclaim);
 		// В спец. области выводим подсказку
 #ifdef MMISH_ENGLISH
-		SetDlgItemText(hdwnd, IDC_STATIC_GROM, L"The program was not trained to work with some of the sounds. To train it press the \"Train\" button, keep silence for a while, then pronounce the sound several times.");
+		SetDlgItemText(hdwnd, IDC_STATIC_GROM, L"Untrained. To enable, press \"Train\", then pause, then make your sound several times.");
 #else
 		SetDlgItemText(hdwnd, IDC_STATIC_GROM, L"Программа ещё не обучена некоторым звукам. Для обучения нажмите кнопку “Тренировать” и, выждав паузу, несколько раз произнесите в микрофон нужный звук.");
 #endif
