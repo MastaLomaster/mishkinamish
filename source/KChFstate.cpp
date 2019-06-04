@@ -7,7 +7,11 @@ volatile bool KChFstate::flag_kc_anytime=false;
 volatile int KChFstate::next_kc_counter=0; // Через сколько фреймов можно нажать  К/Ч (в упрощенном режиме)
 
 volatile WORD KChFstate::key_to_press[6]={0xffff,0xffff,0xffff,0xffff,0xffff,0xffff};
-volatile char KChFstate::repeat_key[6]={0,0,0,0,0,0};
+volatile char KChFstate::repeat_key[6]={0,0,0,0,0,0}; 
+//volatile char KChFstate::toggle_key[6]={0,0,0,0,0,0}; // является ли переключателем 
+volatile char KChFstate::toggle_key[6]={0,0,0,0,0,0}; // является ли переключателем 
+
+
 int KChFstate::key_state[6]={0,0,0,0,0,0}; // нажата-отжата
 int KChFstate::key_cycle_counter[6]={0,0,0,0,0,0}; // Сколько ещё циклов нельзя менять состояние клавиши
 
@@ -183,97 +187,143 @@ void KChFstate::NewFrame(int energy_level)
 	
 }
 
+
+//=========================================================================================
+// Вспомогательная функция для нажатия на клавишу
+// SendInput содран из Mhook
+//=========================================================================================
+void KChFstate::MM_KeyDown(int i)
+{
+	INPUT input={0};
+
+	if(key_to_press[i]>=0xFF00) // Спец.случай. нажатие на кнопки мыши
+	{
+		input.type=INPUT_MOUSE;
+		
+		if(0xFF00==key_to_press[i]) // левая
+			input.mi.dwFlags=MOUSEEVENTF_LEFTDOWN;
+		else
+			input.mi.dwFlags=MOUSEEVENTF_RIGHTDOWN;
+	}
+	else // клавиатура
+	{
+		input.type=INPUT_KEYBOARD;
+		input.ki.dwFlags = KEYEVENTF_SCANCODE;
+
+		if(key_to_press[i]>0xFF) // Этот скан-код из двух байтов, где первый - E0
+		{
+			input.ki.dwFlags|=KEYEVENTF_EXTENDEDKEY;
+		}
+
+		input.ki.wScan=key_to_press[i];
+	}
+			
+			
+	SendInput(1,&input,sizeof(INPUT));
+
+}
+
+//=========================================================================================
+// Вспомогательная функция для отпускания клавиши
+// SendInput содран из Mhook
+//=========================================================================================
+void KChFstate::MM_KeyUp(int i)
+{
+	INPUT input={0};
+	if(key_to_press[i]>=0xFF00) // Спец.случай. нажатие на кнопки мыши
+	{
+		input.type=INPUT_MOUSE;
+				
+		if(0xFF00==key_to_press[i]) // левая
+			input.mi.dwFlags=MOUSEEVENTF_LEFTUP;
+		else
+			input.mi.dwFlags=MOUSEEVENTF_RIGHTUP;
+	}
+	else // клавиатура
+	{
+		input.type=INPUT_KEYBOARD;
+		input.ki.dwFlags = KEYEVENTF_SCANCODE|KEYEVENTF_KEYUP;
+
+		if(key_to_press[i]>0xFF) // Этот скан-код из двух байтов, где первый - E0
+		{
+			input.ki.dwFlags|=KEYEVENTF_EXTENDEDKEY;
+		}
+
+		input.ki.wScan=key_to_press[i];
+	}
+
+	SendInput(1,&input,sizeof(INPUT));	
+}
+
 //=========================================================================================
 // Если вместо мыши нажимаем клавиши, то move обнуляется
-// SendInput содран из Mhook
+// Диаграмма состояний http://localhost/mmish/kchfstate/trytopress.html
 //=========================================================================================
 LONG KChFstate::TryToPress(int i, LONG move)
 {
 	// Защита от дурака...
-	if(i<0||i>6) return move;
+	if(i<0||i>5) return move;
 
 	// Возможно, клавишу с номером i мы вообще не нажимаем...
 	if(key_to_press[i]==0xffff) return move;
 
-	// счётчик. при повторе меняет состояние клавиши каждые два тика (1/5 секунды)
+	// счётчик. один тик=1/10 секунды. переключатель можно отменить через 2 тика (1/5 секунды)
 	if(key_cycle_counter[i]>0) key_cycle_counter[i]--; else key_cycle_counter[i]=0; // Защита от случайного ухода в минус.
 
-	// Всё-таки нажатие будет
-	if((0==key_state[i])&&(0==key_cycle_counter[i])) //Нажимаем, если move больше граничного значения. Пусть это будет 3
+	// 0 - клавиша не нажата
+	if(0==key_state[i]) //Нажимаем, если move больше граничного значения. Пусть это будет 3
 	{
 		if(move>3)
 		{
-			INPUT input={0};
-
-			if(key_to_press[i]>=0xFF00) // Спец.случай. нажатие на кнопки мыши
+			if(toggle_key[i]&&(key_cycle_counter[i]>0)) // не отстоялся, чтобы переключиться. Взбаламутили снова
 			{
-				input.type=INPUT_MOUSE;
-				
-				if(0xFF00==key_to_press[i]) // левая
-					input.mi.dwFlags=MOUSEEVENTF_LEFTDOWN;
-				else
-					input.mi.dwFlags=MOUSEEVENTF_RIGHTDOWN;
+				key_cycle_counter[i]=2;
 			}
-			else // клавиатура
+			else
 			{
-				input.type=INPUT_KEYBOARD;
-				input.ki.dwFlags = KEYEVENTF_SCANCODE;
-
-				if(key_to_press[i]>0xFF) // Этот скан-код из двух байтов, где первый - E0
-				{
-					input.ki.dwFlags|=KEYEVENTF_EXTENDEDKEY;
-				}
-
-				input.ki.wScan=key_to_press[i];
+				MM_KeyDown(i);
+				key_state[i]=1; // Клавиша нажата
+				key_cycle_counter[i]=2;
 			}
-			
-			
-			SendInput(1,&input,sizeof(INPUT));
-
-			key_state[i]=1; // Клавиша нажата
-			key_cycle_counter[i]=1; // Ещё (1) цикл её нельзя будет отжимать
-
-			// [25-AUG-2017] при повторяющихся нажатиях рекурсивно вызываем сами себя
-			//if(repeat_key[i])
-			//	TryToPress(i, 0);
-			
 		}
 	}
-	else // Клавиша нажата
+	else if(1==key_state[i]) // 1 - Клавиша нажата
 	{
-		// Отжимаем её, только если вообще не было признаков этого звука (move==0) или [25-AUG-2017] пришло время отжатия для повтора
-		if((0==move)||((repeat_key[i])&&(0==key_cycle_counter[i])))
+		if((move>0)&&(toggle_key[i])) // переключатель пытаются подтолкнуть
 		{
-			INPUT input={0};
-			if(key_to_press[i]>=0xFF00) // Спец.случай. нажатие на кнопки мыши
+			if(key_cycle_counter[i]>0) // не отстоялся, чтобы выключиться. Взбаламутили снова
 			{
-				input.type=INPUT_MOUSE;
-				
-				if(0xFF00==key_to_press[i]) // левая
-					input.mi.dwFlags=MOUSEEVENTF_LEFTUP;
-				else
-					input.mi.dwFlags=MOUSEEVENTF_RIGHTUP;
-			}
-			else // клавиатура
-			{
-				input.type=INPUT_KEYBOARD;
-				input.ki.dwFlags = KEYEVENTF_SCANCODE|KEYEVENTF_KEYUP;
-
-				if(key_to_press[i]>0xFF) // Этот скан-код из двух байтов, где первый - E0
+				key_cycle_counter[i]=2;
+				if(repeat_key[i]) // но автоповтор работает
 				{
-					input.ki.dwFlags|=KEYEVENTF_EXTENDEDKEY;
+					MM_KeyUp(i);
+					key_state[i]=2;
 				}
-
-				input.ki.wScan=key_to_press[i];
 			}
-
-			SendInput(1,&input,sizeof(INPUT));	
-
-			key_state[i]=0; // Клавиша отжата
-			key_cycle_counter[i]=1; // Ещё (1) цикл её нельзя будет нажимать
+			else // по крайней мере два такта его не трогали, можно отжимать
+			{
+				MM_KeyUp(i);
+				key_state[i]=0;
+				key_cycle_counter[i]=2;
+			}
 		}
-
-	
+		else if(((0==move)||(repeat_key[i]))&&(!toggle_key[i])) // Отжимаем её, только если вообще не было признаков этого звука (move==0) или [25-AUG-2017] пришло время отжатия для повтора
+		{
+			MM_KeyUp(i);
+			key_state[i]=0; // Клавиша отжата
+		}
+		else if((repeat_key[i])&&(toggle_key[i])) // временно отжимаем
+		{
+			MM_KeyUp(i);
+			key_state[i]=2;
+		}
+	}
+	else // Осталось только состояние 2 - временно отжатая клавиша в режиме REPEAT + TOGGLE 
+	{
+		// Всегда нажимаем такую клавишу и переходим в состояние 1
+		MM_KeyDown(i);
+		key_state[i]=1; // Клавиша нажата
+		if((move>0)&&(key_cycle_counter[i]>0)) key_cycle_counter[i]=2;
 	}
 	return 0;
 }

@@ -531,7 +531,8 @@ wchar_t *MModel::Save(bool saveas, HWND hdwnd, wchar_t *_filename)
 	// 2. Пошло реальное сохранение
 	// 2.1. // [28-DEC] Сигнатура "MM002 ", [23-AUG-2017] Сигнатура "MM003 " - запоминает клавиши для нажатия
 	// [25-AUG-2017] Сигнатура "MM004 " - запоминает повторение клавиш
-	fprintf(fout,"MM004 ");
+	// [05-JUN-2019] Сигнатура "MM005 " - запоминает залипание клавиш
+	fprintf(fout,"MM005 ");
 	
 	// Перебираем все данные в списке mfcc данной модификации звука
 	int person,sound,modifier,num_mfcc;
@@ -570,6 +571,9 @@ wchar_t *MModel::Save(bool saveas, HWND hdwnd, wchar_t *_filename)
 
 	//[25-AUG-2017]
 	fwrite((void *)&KChFstate::repeat_key, 6*sizeof(char),1,fout);
+
+	//[05-JUN-2019]
+	fwrite((void *)&KChFstate::toggle_key, 6*sizeof(char),1,fout);
 
 	fclose(fout);
 
@@ -659,7 +663,8 @@ wchar_t *MModel::Load(HWND hdwnd, wchar_t *_filename)
 	
 	// Может читать файл конфигурации предыдущих версий
 	//[23-AUG-2017]
-	if(0==strncmp("MM004 ",signature,6)) version=4;
+	if(0==strncmp("MM005 ",signature,6)) version=5;
+	else if(0==strncmp("MM004 ",signature,6)) version=4;
 	else if(0==strncmp("MM003 ",signature,6)) version=3;
 	else if(0==strncmp("MM002 ",signature,6)) version=2;
 	else if(0!=strncmp("MM001 ",signature,6)) goto bad_file;
@@ -707,6 +712,11 @@ wchar_t *MModel::Load(HWND hdwnd, wchar_t *_filename)
 		fread((void *)&KChFstate::repeat_key, 6*sizeof(char),1,fin); 
 	}
 
+	if(version>=5) // с [05-JUN-2019] добавились повторы клавиш для нажатия
+	{
+		fread((void *)&KChFstate::toggle_key, 6*sizeof(char),1,fin); 
+	}
+
 	fclose(fin);
 	return filetitle; 
 
@@ -718,7 +728,7 @@ bad_file: // Такого не должно случаться никогда...
 		MessageBox(NULL,L"Неверный формат файла",filetitle,MB_ICONEXCLAMATION|MB_OK);
 	}
 	filetitle[0]=0;
-	
+	fclose(fin);
 	return NULL;
 }
 

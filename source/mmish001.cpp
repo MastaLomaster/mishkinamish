@@ -113,6 +113,7 @@ static void SetKeysInDialogue()
 {
 	int listbox[6]={IDC_KBD0, IDC_KBD1, IDC_KBD2, IDC_KBD3, IDC_KBD4, IDC_KBD5};
 	int listbox2[4]={IDC_CHECK_REPEAT0, IDC_CHECK_REPEAT1, IDC_CHECK_REPEAT2, IDC_CHECK_REPEAT3};
+	int listbox3[4]={IDC_CHECK_TOGGLE0, IDC_CHECK_TOGGLE1, IDC_CHECK_TOGGLE2, IDC_CHECK_TOGGLE3};
 	int i,j;
 	bool found;
 
@@ -134,13 +135,18 @@ static void SetKeysInDialogue()
 		}
 	}
 
-	// Теперь чекбоксы "повтор"
+	// Теперь чекбоксы "повтор" и "залипание"
 	for(i=0;i<4;i++)
 	{
 		if(KChFstate::repeat_key[i]) // Корректируем галочку в диалоге
 			SendDlgItemMessage(hdwnd, listbox2[i], BM_SETCHECK, BST_CHECKED, 0);
 		else 
 			SendDlgItemMessage(hdwnd, listbox2[i], BM_SETCHECK, BST_UNCHECKED, 0);
+
+		if(KChFstate::toggle_key[i]) // Корректируем галочку в диалоге
+			SendDlgItemMessage(hdwnd, listbox3[i], BM_SETCHECK, BST_CHECKED, 0);
+		else 
+			SendDlgItemMessage(hdwnd, listbox3[i], BM_SETCHECK, BST_UNCHECKED, 0);
 	}
 }
 
@@ -398,8 +404,34 @@ static BOOL CALLBACK DlgWndProc(HWND hdwnd,
 
 		// 4. Включаем таймер #1 для индикаторов
 		SetTimer(hdwnd,1,100,NULL); // 10 раз в секунду
+
+		// 5. Регистрируем комбинацию клавиш Alt+F5
+		RegisterHotKey(hdwnd, 1, MOD_ALT | MOD_NOREPEAT, VK_F5);  //0x74
 		
 		return 1;
+
+	case WM_HOTKEY: // В точности, как у IDOK:
+		// Активация / деактивация
+		if(flag_move_mouse)
+		{
+			flag_move_mouse=false;
+#ifdef MMISH_ENGLISH
+			SetDlgItemText(hdwnd, IDOK, L"Start");
+#else
+			SetDlgItemText(hdwnd, IDOK, L"Запустить");
+#endif
+		}
+		else
+		{
+			flag_move_mouse=true;
+#ifdef MMISH_ENGLISH
+			SetDlgItemText(hdwnd, IDOK, L"Stop");
+#else
+			SetDlgItemText(hdwnd, IDOK, L"Стоп");
+#endif
+		}
+		return 1;
+
 
 	case WM_COMMAND:
 		switch(LOWORD(wparam))
@@ -410,6 +442,7 @@ static BOOL CALLBACK DlgWndProc(HWND hdwnd,
 			// Иначе просто выходим
 			if(!flag_model_changed)
 			{
+				UnregisterHotKey(hdwnd, 1); // В 3 местах
 				PostQuitMessage(0); 
 				return (1);
 			}
@@ -423,11 +456,13 @@ static BOOL CALLBACK DlgWndProc(HWND hdwnd,
 			switch(exit_result)
 			{
 			case IDYES:
+				UnregisterHotKey(hdwnd, 1); // В 3 местах
 				model.Save(false,hdwnd,L"default.MM1");
 				PostQuitMessage(0); // Ибо мы теперь немодальные
 				break;
 
 			case IDNO:
+				UnregisterHotKey(hdwnd, 1); // В 3 местах
 				PostQuitMessage(0); // Ибо мы теперь немодальные
 				break;
 
@@ -574,6 +609,48 @@ static BOOL CALLBACK DlgWndProc(HWND hdwnd,
 				KChFstate::SetRepeatKey(3,0);
 
 			break;
+			
+			//===== чекбоксы залипания
+
+		case IDC_CHECK_TOGGLE0:
+			flag_model_changed=true;
+			// Тут можно было как-то wparam контролировать, но не было под рукой справки
+			if(BST_CHECKED==SendDlgItemMessage(hdwnd, IDC_CHECK_TOGGLE0, BM_GETCHECK, 0, 0))
+				KChFstate::SetToggleKey(0,1);
+			else
+				KChFstate::SetToggleKey(0,0);
+
+			break;
+
+		case IDC_CHECK_TOGGLE1:
+			flag_model_changed=true;
+			// Тут можно было как-то wparam контролировать, но не было под рукой справки
+			if(BST_CHECKED==SendDlgItemMessage(hdwnd, IDC_CHECK_TOGGLE1, BM_GETCHECK, 0, 0))
+				KChFstate::SetToggleKey(1,1);
+			else
+				KChFstate::SetToggleKey(1,0);
+
+			break;
+
+		case IDC_CHECK_TOGGLE2:
+			flag_model_changed=true;
+			// Тут можно было как-то wparam контролировать, но не было под рукой справки
+			if(BST_CHECKED==SendDlgItemMessage(hdwnd, IDC_CHECK_TOGGLE2, BM_GETCHECK, 0, 0))
+				KChFstate::SetToggleKey(2,1);
+			else
+				KChFstate::SetToggleKey(2,0);
+
+			break;
+
+		case IDC_CHECK_TOGGLE3:
+			flag_model_changed=true;
+			// Тут можно было как-то wparam контролировать, но не было под рукой справки
+			if(BST_CHECKED==SendDlgItemMessage(hdwnd, IDC_CHECK_TOGGLE3, BM_GETCHECK, 0, 0))
+				KChFstate::SetToggleKey(3,1);
+			else
+				KChFstate::SetToggleKey(3,0);
+
+			break;
 			//=====
 
 		case IDC_BUTTON_WAV_DUMP:
@@ -704,10 +781,11 @@ int WINAPI WinMain(HINSTANCE hInst,HINSTANCE,LPSTR cline,INT)
 
 	// При необходимости напечатать восклицательные знаки
 	// Если же модель полностью натренирована, разрешаем работу и пишем на кнопке "Старт"
+	// 05-jun-2019 - сразу никогда не запускаем
 	if(UpdateExclaim())
 	{
-		flag_move_mouse=true;
-		SetDlgItemText(hdwnd, IDOK, L"Стоп");
+		//flag_move_mouse=true;
+		//SetDlgItemText(hdwnd, IDOK, L"Стоп");
 	}
 
 	//Цикл обработки сообщений

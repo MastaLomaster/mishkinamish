@@ -14,13 +14,18 @@ public:
 	// [23-AUG-2017] Лучшего места для хранения нажимаемых клавиш не нашлось...
 	static volatile WORD key_to_press[6];
 	static volatile char repeat_key[6];
+	static volatile char toggle_key[6];
 	static void SetKeyToPress(int i, WORD key){if((i>=0)&&(i<6)) key_to_press[i]=key;}
 	static void SetRepeatKey(int i, char repeat){if((i>=0)&&(i<6)) repeat_key[i]=repeat;}
+	static void SetToggleKey(int i, char toggle){if((i>=0)&&(i<6)) toggle_key[i]=toggle;}
 	static LONG TryToPress(int i, LONG move);
 protected:
 	static volatile int state,minlevel,counter;
 	static int key_state[6]; // нажата-отжата
 	static int key_cycle_counter[6]; // Сколько ещё циклов нельзя менять состояние клавиши
+
+	static void MM_KeyDown(int i); // Вспомогательная функция для нажатия на клавишу
+	static void MM_KeyUp(int i); // Вспомогательная функция для отпускания клавиши
 };
 
 #endif
